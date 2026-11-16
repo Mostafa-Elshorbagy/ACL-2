@@ -1,0 +1,90 @@
+//1. Query 1
+MATCH (result:Result)-[:FOR_RACE]->(race:Race {year: 2021}),
+      (result)-[:BY_DRIVER]->(driver:Driver)
+WITH driver,
+     sum(result.points) AS Points,
+     sum(CASE WHEN result.position = 1 THEN 1 ELSE 0 END) AS Wins
+RETURN driver.forename + ' ' + driver.surname AS Driver, Points, Wins
+ORDER BY Points DESC, Wins DESC
+
+//2. Query 2
+MATCH (result:Result)-[:FOR_RACE]->(race:Race),
+      (result)-[:FOR_CONSTRUCTOR]->(constructor:Constructor),
+      (result)-[:HAS_STATUS]->(status:Status)
+WHERE race.year >= 2014 AND race.year <= 2021
+WITH constructor,
+     count(result) AS Entries,
+     sum(CASE WHEN status.status = 'Finished' OR status.status STARTS WITH '+'
+              THEN 1 ELSE 0 END) AS Classified
+WHERE Entries >= 100
+RETURN constructor.constructor_name AS Constructor,
+       Entries,
+       Classified,
+       toFloat(Classified) / Entries AS Reliability
+ORDER BY Reliability DESC
+
+//3. Query 3
+MATCH (hamilton:Driver {driverId: 1})<-[:BY_DRIVER]-(hamiltonResult:Result)
+      -[:FOR_RACE]->(race:Race),
+      (hamiltonResult)-[:FOR_CONSTRUCTOR]->(constructor:Constructor),
+      (bottas:Driver {driverId: 822})<-[:BY_DRIVER]-(bottasResult:Result)
+      -[:FOR_RACE]->(race),
+      (bottasResult)-[:FOR_CONSTRUCTOR]->(constructor)
+WITH constructor,
+     count(DISTINCT race) AS Shared_Races,
+     sum(CASE WHEN hamiltonResult.positionOrder < bottasResult.positionOrder
+              THEN 1 ELSE 0 END) AS Hamilton_Ahead,
+     sum(CASE WHEN bottasResult.positionOrder < hamiltonResult.positionOrder
+              THEN 1 ELSE 0 END) AS Bottas_Ahead
+RETURN constructor.constructor_name AS Constructor,
+       Shared_Races,
+       Hamilton_Ahead,
+       Bottas_Ahead
+ORDER BY Constructor
+
+//4. Query 4
+MATCH (driver:Driver)
+CALL (driver) {
+    MATCH (result:Result)-[:BY_DRIVER]->(driver),
+          (result)-[:FOR_RACE]->(race:Race)-[:AT_CIRCUIT]->
+          (circuit:Circuit {circuitId: 6}),
+          (result)-[:HAS_STATUS]->(status:Status)
+    WHERE race.date < date('2020-01-01')
+      AND NOT status.status IN [
+          'Did not qualify',
+          'Did not prequalify',
+          'Withdrew'
+      ]
+    RETURN count(DISTINCT race) AS Starts,
+           avg(result.positionOrder) AS Avg_Finish,
+           sum(CASE WHEN result.position = 1 THEN 1 ELSE 0 END) AS Wins
+}
+WITH driver, Starts, Avg_Finish, Wins
+WHERE Starts >= 5
+RETURN driver.forename + ' ' + driver.surname AS Driver,
+       Starts,
+       Avg_Finish,
+       Wins
+ORDER BY Avg_Finish ASC, Wins DESC
+
+//5. Query 5
+MATCH (result:Result)-[:BY_DRIVER]->(driver:Driver),
+      (result)-[:FOR_RACE]->(race:Race),
+      (result)-[:FOR_CONSTRUCTOR]->(constructor:Constructor)
+WHERE race.year IN [2020, 2021]
+WITH driver, race.year AS year, constructor,
+     count(result) AS entries
+ORDER BY driver.driverId, year, entries DESC, constructor.constructorId ASC
+WITH driver, year,
+     collect({
+         constructorId: constructor.constructorId,
+         entries: entries
+     })[0] AS primary
+WITH driver,
+     max(CASE WHEN year = 2020 THEN primary.constructorId END) AS constructor2020,
+     max(CASE WHEN year = 2021 THEN primary.constructorId END) AS constructor2021
+WHERE constructor2020 IS NOT NULL
+  AND constructor2021 IS NOT NULL
+  AND constructor2020 <> constructor2021
+RETURN count(driver) AS Drivers_Changed,
+       collect(driver.forename + ' ' + driver.surname) AS Drivers

@@ -1,0 +1,5 @@
+# Replace the placeholder with the Neo4j database password before running.
+URI=neo4j+s://a0858c96.databases.neo4j.io
+USERNAME=neo4j
+PASSWORD=YOUR_AURA_PASSWORD_HERE
+DATABASE=neo4j
