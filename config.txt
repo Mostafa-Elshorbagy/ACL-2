@@ -1,5 +1,7 @@
-# Replace the placeholder with the Neo4j database password before running.
-URI=neo4j+s://a0858c96.databases.neo4j.io
-USERNAME=neo4j
-PASSWORD=YOUR_AURA_PASSWORD_HERE
-DATABASE=neo4j
+# Wait a few minutes before connecting using these details. Instance status can be viewed at https://console.neo4j.io
+URI=neo4j+s://5072f036.databases.neo4j.io
+USERNAME=5072f036
+PASSWORD=V7LSfcrCWrHG7fcxFpT3HCaEx-v53vHIL-DMtnG8sVU
+DATABASE=5072f036
+INSTANCEID=5072f036
+INSTANCENAME=bigOne

@@ -50,8 +50,27 @@ def neo4j_driver(settings: dict[str, str]):
             "The neo4j package is required. Install it with: pip install neo4j"
         ) from exc
 
+    uri = settings["URI"]
+    secure_scheme = uri.startswith(("neo4j+s://", "bolt+s://"))
+    if secure_scheme:
+        uri = uri.replace("+s://", "://", 1)
+        try:
+            import certifi
+            import ssl
+        except ImportError as exc:
+            raise RuntimeError(
+                "The certifi package is required for secure Neo4j connections. "
+                "Install it with: pip install certifi"
+            ) from exc
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        return GraphDatabase.driver(
+            uri,
+            auth=(settings["USERNAME"], settings["PASSWORD"]),
+            ssl_context=ssl_context,
+        )
+
     return GraphDatabase.driver(
-        settings["URI"],
+        uri,
         auth=(settings["USERNAME"], settings["PASSWORD"]),
     )
 
